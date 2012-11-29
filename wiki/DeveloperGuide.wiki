@@ -1,0 +1,143 @@
+#summary Usage examples of ros-gwt
+
+= Introduction =
+
+There are 3 functionalities covered by rosbridge, which are:
+
+  * Topics (advertise/publish/subscribe of messages)
+  * Services
+  * Params
+
+= Basic usage =
+
+Set up the connection to rosbridge and listen for connection state change or erors:
+
+<code language="java">
+ConnectionStateListener connStateListener = new ConnectionStateListener() {
+	public void onOpen() {
+		log("Opened socket");
+	}
+	
+	public void onError() {
+		log("Error in socket");
+	}
+	
+	public void onClose() {
+		log("Socket closed");
+	}
+};
+
+if(!JavaScriptWebSocket.IsSupported()) {
+	Window.alert("WebSockets not supported by your browser.\n\nUpgrade your browser.");
+} else {
+	ros = new ROS("ws://rosbridge-server:9090/", connStateListener);
+        // connection is opened automatically on object creation
+}
+</code>
+
+= ROS Introspection =
+
+You can ask the list of topics using the {{{getTopics}}} method:
+
+<code language="java">
+ros.getTopics(new Callback<List<ROS.Topic>, Void>() {
+	public void onFailure(Void reason) {
+		Window.alert("getTopics failed");
+	}
+
+	public void onSuccess(List<ROS.Topic> result) {
+		Window.alert(result.toString());
+	}
+});
+</code>
+
+and in a similar way, works also for services and params, using {{{getServices}}} and {{{getParams}}}.
+
+= Topics =
+
+Construct a topic object:
+
+<code language="java">
+ROS.Topic cmdVel = ros.newTopic("/cmd_vel", "geometry_msgs/Twist");
+</code>
+
+now it can be used for publishing messages:
+
+<code language="java">
+topic.publish(msg);
+// note: the topic will be advertised if it has not done before
+</code>
+
+subscribing:
+
+<code language="java">
+topic.subscribe(new Callback<JSONObject, Void>() {
+	public void onSuccess(JSONObject result) {
+		log(result.toString());
+	}
+					
+	public void onFailure(Void reason) {
+		Window.alert("subscribe failed");
+	}
+});
+</code>
+
+and unsubscribing:
+
+<code language="java">
+topic.unsubscribe();
+</code>
+
+= Services =
+
+Construct a service object:
+
+<code language="java">
+ROS.Service s = ros.newService("/myService", "mypkg/MyServiceType");
+</code>
+
+<code language="java">
+s.callService(args, new Callback<JSONObject, Void>() {
+	public void onSuccess(JSONObject result) {
+		// use the result
+	}
+
+	public void onFailure(Void reason) {
+		Window.alert("callService failed");
+	}
+});
+</code>
+
+= Params =
+
+Construct a param object:
+
+<code language="java">
+ROS.Param param = ros.newParam("/myparam");
+</code>
+
+Get it:
+
+<code language="java">
+param.get(new Callback<JSONObject, Void>() {
+	public void onSuccess(JSONObject result) {
+		Window.alert("param value is " + result.toString());
+	}
+
+	public void onFailure(Void reason) {
+		Window.alert("failed to get param");
+	}
+});
+</code>
+
+or set it:
+
+<code language="java">
+param.set(paramValue, new Callback<JSONObject, Void>() {
+	public void onSuccess(JSONObject result) {
+	}
+
+	public void onFailure(Void reason) {
+	}
+});
+</code>
