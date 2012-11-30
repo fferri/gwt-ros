@@ -318,7 +318,7 @@ public class ROS {
 	 * {@link MessageListener}s are registered/deregistered using
 	 * {@link ROS#addMessageHandler} and {@link ROS#removeHandler}.
 	 * 
-	 * @author Federico
+	 * @author Federico Ferri
 	 *
 	 */
 	public static interface MessageListener {
