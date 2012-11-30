@@ -1,4 +1,4 @@
-#Generating Java beans for parsing from and serializing to JSON strings
+#summary Generating Java beans for parsing from and serializing to JSON strings
 
 = Usage =
 
