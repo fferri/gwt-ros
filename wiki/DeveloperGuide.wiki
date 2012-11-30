@@ -1,5 +1,7 @@
 #summary Usage examples of ros-gwt
 
+<wiki:toc max_depth="2" />
+
 = Introduction =
 
 There are 3 functionalities covered by rosbridge, which are:
