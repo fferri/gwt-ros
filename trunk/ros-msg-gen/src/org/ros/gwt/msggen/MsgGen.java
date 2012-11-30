@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -92,11 +93,31 @@ public class MsgGen {
 		return s.substring(i, j);
 	}
 	
+	static List<String> getReversedPathComponents(File file) {
+		List<String> pathComp = new LinkedList<String>();
+		try {file = file.getCanonicalFile();} catch(IOException e) {}
+		while(file != null) {
+			pathComp.add(file.getName());
+			file = file.getParentFile();
+		}
+		return pathComp;
+	}
+	
+	static boolean matchPathNameToMsg(File file, String msgName) {
+		if(!file.isFile()) return false;
+		List<String> pathComp = getReversedPathComponents(file);
+		if(pathComp.size() < 3) return false;
+		ROSMsgType msgType = ROSMsgType.parse(msgName);
+		return (pathComp.get(0).equals(msgType.type + ".msg")
+				&& pathComp.get(1).equals("msg")
+				&& (msgType.pkg == null || pathComp.get(2).equals(msgType.pkg)));
+	}
+	
 	static Set<File> findMatchingMsgs(File root, String msgName, Set<File> result) {
 		if(!root.isDirectory()) throw new IllegalArgumentException();
 		File fs[] = root.listFiles();
 		for(File f : fs) {
-			if(f.isFile() && f.getAbsolutePath().replaceAll("/msg/", "/").contains("/" + msgName + ".msg"))
+			if(matchPathNameToMsg(f, msgName))
 				result.add(f);
 			else if(f.isDirectory())
 				findMatchingMsgs(f, msgName, result);
