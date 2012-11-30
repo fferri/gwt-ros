@@ -1,5 +1,4 @@
 #summary Usage examples of ros-gwt
-#sidebar TableOfContents
 
 = Introduction =
 
