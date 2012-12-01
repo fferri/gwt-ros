@@ -170,7 +170,7 @@ public class ROS {
 	 * @param op The op (or UID) where the listener belongs to.
 	 * @param listener The messageCallback to deregister.
 	 */
-	public void removeListener(String op, MessageListener listener) {
+	public void removeMessageListener(String op, MessageListener listener) {
 		List<MessageListener> l = messageListeners.get(op);
 		if(l == null)
 			return;
@@ -183,7 +183,7 @@ public class ROS {
 	 *  
 	 * @param op The op (or UID).
 	 */
-	public void removeAllListeners(String op) {
+	public void removeAllMessageListeners(String op) {
 		messageListeners.remove(op);
 	}
 	
@@ -321,7 +321,7 @@ public class ROS {
 	 * {@link MessageListener} is notified when a message is received from rosbridge.
 	 * 
 	 * {@link MessageListener}s are registered/deregistered using
-	 * {@link ROS#addMessageHandler} and {@link ROS#removeHandler}.
+	 * {@link ROS#addMessageListener} and {@link ROS#removeMessageListener}.
 	 * 
 	 * @author Federico Ferri
 	 *
@@ -337,9 +337,9 @@ public class ROS {
 	/**
 	 * Create a new topic object.
 	 * 
-	 * @param name
-	 * @param messageType
-	 * @return
+	 * @param name The ROS topic name.
+	 * @param messageType The type of the exchanged messages.
+	 * @return A {@link ROS.Topic} object.
 	 */
 	public Topic newTopic(String name, String messageType) {
 		return new Topic(name, messageType);
@@ -348,9 +348,9 @@ public class ROS {
 	/**
 	 * Create a new service object.
 	 * 
-	 * @param name
-	 * @param serviceType
-	 * @return
+	 * @param name The ROS service name.
+	 * @param serviceType The type of the exchanged messages.
+	 * @return A {@link ROS.Service} object.
 	 */
 	public Service newService(String name, String serviceType) {
 		return new Service(name, serviceType);
@@ -359,8 +359,8 @@ public class ROS {
 	/**
 	 * Create a new param object.
 	 * 
-	 * @param name
-	 * @return
+	 * @param name The ROS param name.
+	 * @return A {@link ROS.Param} object.
 	 */
 	public Param newParam(String name) {
 		return new Param(name);
@@ -443,7 +443,7 @@ public class ROS {
 		 * 
 		 */
 		public void unsubscribe() {
-			removeAllListeners(getName());
+			removeAllMessageListeners(getName());
 			final String unsubscribeId = uidGenerator.generate("unsubscribe", name);
 			// TODO: queue message if not connected
 			JSONObject o = new JSONObject();
@@ -548,7 +548,7 @@ public class ROS {
 				addMessageListener(serviceCallId, new MessageListener() {
 					public void onMessage(JSONObject message) {
 						listener.onMessage(message);
-						removeListener(serviceCallId, this);
+						removeMessageListener(serviceCallId, this);
 					}
 				});
 			JSONObject o = new JSONObject();
