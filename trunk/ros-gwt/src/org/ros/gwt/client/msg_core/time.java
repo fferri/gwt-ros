@@ -11,6 +11,21 @@ public class time extends Message {
 	public time() {}
 	
 	public time(long secs_, long nsecs_) {secs=secs_; nsecs=nsecs_;}
+
+	@Override
+	public String getTypeName() {
+		return "time";
+	}
+
+	@Override
+	public String getPackageName() {
+		return null;
+	}
+
+	@Override
+	public String getFullTypeName() {
+		return "time";
+	}
 	
 	@Override
 	public boolean parse(JSONValue v) {
