@@ -208,6 +208,30 @@ public class MsgGen {
 		}
 		writer.write("}" + nl);
 		writer.write("	" + nl);
+		
+		ROSMsgType msgTypeObj = ROSMsgType.parse(rosMsgType);
+		writer.write("	@Override" + nl);
+		writer.write("	public String getTypeName() {" + nl);
+		writer.write("		return \"" + msgTypeObj.type + "\";" + nl);
+		writer.write("	}" + nl);
+		writer.write("	" + nl);
+		writer.write("	@Override" + nl);
+		writer.write("	public String getPackageName() {" + nl);
+		if(msgTypeObj.pkg == null)
+			writer.write("		return null;" + nl);
+		else
+			writer.write("		return \"" + msgTypeObj.pkg + "\";" + nl);
+		writer.write("	}" + nl);
+		writer.write("	" + nl);
+		writer.write("	@Override" + nl);
+		writer.write("	public String getFullTypeName() {" + nl);
+		if(msgTypeObj.pkg == null)
+			writer.write("		return \"" + msgTypeObj.type + "\";" + nl);
+		else
+			writer.write("		return \"" + msgTypeObj.pkg + "/" + msgTypeObj.type + "\";" + nl);
+		writer.write("	}" + nl);
+		writer.write("	" + nl);
+		
 		writer.write("	@Override" + nl);
 		writer.write("	public boolean parse(JSONValue v) {" + nl);
 		writer.write("		try {" + nl);
