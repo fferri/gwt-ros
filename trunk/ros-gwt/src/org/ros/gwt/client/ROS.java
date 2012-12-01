@@ -611,11 +611,11 @@ public class ROS {
 		 * 
 		 * @param value Param value to set.
 		 */
-		public void set(JSONValue value) {
+		public void set(String value) {
 			Service paramClient = new Service("/rosapi/set_param", "rosapi/SetParam");
 			JSONObject serviceArgs = new JSONObject();
 			serviceArgs.put("name", new JSONString(name));
-			serviceArgs.put("value", value);
+			serviceArgs.put("value", new JSONString(value));
 			paramClient.callService(serviceArgs, null);
 		}
 	}
