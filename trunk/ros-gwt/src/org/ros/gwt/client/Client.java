@@ -209,7 +209,7 @@ public class Client implements EntryPoint {
 		btnParamSet.addClickHandler(new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				ROS.Param param = ros.newParam(txtParamName.getText());
-				param.set(new JSONString(txtParamValue.getText()));
+				param.set(txtParamValue.getText());
 			}
 		});
 		btnParamGet.addClickHandler(new ClickHandler() {
