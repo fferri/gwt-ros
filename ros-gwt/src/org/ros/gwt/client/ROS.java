@@ -36,16 +36,23 @@ public class ROS {
 	private WebSocket socket;
 	
 	/**
-	 * Counter for generating uniquely identified messages. This UID is used for
+	 * Generator of uniquely identified messages. This UID is used for
 	 * tracking which response belongs to which request made to rosbridge.
 	 */
-	private long idCounter = 0;
+	private class UIDGenerator {
+		private long idCounter = 0;
+		
+		public String generate(String op, String name) {
+			return op + ":" + name + ":" + ++idCounter;
+		}
+	}
+	
+	private final UIDGenerator uidGenerator = new UIDGenerator();
 	
 	/**
-	 * Map of handlers. Key is the UID, and value is a callback listening
-	 * for some {@link JSONObject}.
+	 * Map of listeners keyed by op/UID.
 	 */
-	private Map<String, List<Callback<JSONObject, Void>>> messageHandlers = new HashMap<String, List<Callback<JSONObject, Void>>>();
+	private Map<String, List<MessageListener>> messageListeners = new HashMap<String, List<MessageListener>>();
 
 	/**
 	 * Construct a {@link ROS} object for communicating with the rosbridge.
@@ -54,6 +61,48 @@ public class ROS {
 	 * @param listener {@link ConnectionStateListener} that reports connection state changes.
 	 */
 	public ROS(String url, final ConnectionStateListener listener) {
+		addMessageListener("png", new MessageListener() {
+			public void onMessage(JSONObject message) {
+				JSONString base64data = message.get("data").isString();
+				if(base64data != null) {
+					final com.google.gwt.user.client.ui.Image image = new com.google.gwt.user.client.ui.Image();
+					image.addLoadHandler(new LoadHandler() {
+						public void onLoad(LoadEvent event) {
+							Canvas canvas = Canvas.createIfSupported();
+							Context2d context = canvas.getContext2d();
+							context.drawImage(ImageElement.as(image.getElement()), 0, 0);
+							ImageData imageData = context.getImageData(0, 0, image.getWidth(), image.getHeight());
+							CanvasPixelArray rawData = imageData.getData();
+							StringBuffer jsonData = new StringBuffer();
+							for(int i = 0; i < rawData.getLength(); i += 1) {
+								if(rawData.get(i) > 0) {
+									jsonData.append(String.valueOf(rawData.get(i)));
+								}
+							}
+							ROS.this.onMessage(jsonData.toString());
+						}
+					});
+					image.setUrl("data:image/png;base64," + base64data.stringValue());
+				}
+			}
+		});
+		addMessageListener("publish", new MessageListener() {
+			public void onMessage(JSONObject message) {
+				JSONString topic = message.get("topic").isString();
+				JSONObject msg = message.get("msg").isObject();
+				if(topic != null)
+					callListeners(topic.stringValue(), msg);
+			}
+		});
+		addMessageListener("service_response", new MessageListener() {
+			public void onMessage(JSONObject message) {
+				JSONString id = message.get("id").isString();
+				JSONObject values = message.get("values").isObject();
+				if(id != null)
+					callListeners(id.stringValue(), values);
+			}
+		});
+		
 		JavaScriptWebSocketFactory jsWebSocketFactory = new JavaScriptWebSocketFactory();
 		socket = jsWebSocketFactory.createWebSocket(url, new WebSocketCallback() {
 			public void onOpen(WebSocket webSocket) {
@@ -100,43 +149,42 @@ public class ROS {
 	}
 
 	/**
-	 * Register a handler for a certain op (or UID).
-	 * Multiple handlers will be called sequentially.
-	 * A op equal to * will be called for every op (or UID).
+	 * Register a listener for a certain op (or UID).
+	 * Multiple listener will be called sequentially.
 	 * 
 	 * @param op The op (or UID) to register handler for.
-	 * @param messageCallback The handler callback.
+	 * @param listener The listener callback.
 	 */
-	public void addMessageHandler(String op, Callback<JSONObject, Void> messageCallback) {
-		List<Callback<JSONObject, Void>> l = messageHandlers.get(op);
+	public void addMessageListener(String op, MessageListener listener) {
+		List<MessageListener> l = messageListeners.get(op);
 		if(l == null)
-			l = new ArrayList<Callback<JSONObject, Void>>();
-		if(!l.contains(messageCallback))
-			l.add(messageCallback);
-		messageHandlers.put(op, l);
+			l = new ArrayList<MessageListener>();
+		if(!l.contains(listener))
+			l.add(listener);
+		messageListeners.put(op, l);
 	}
 
 	/**
-	 * Deregister a specific handler for a certain op (or UID).
+	 * Deregister a specific listener for a certain op (or UID).
 	 * 
-	 * @param op The op (or UID) where messageCallback belongs to.
-	 * @param messageCallback The messageCallback to deregister.
+	 * @param op The op (or UID) where the listener belongs to.
+	 * @param listener The messageCallback to deregister.
 	 */
-	public void removeHandler(String op, Callback<JSONObject, Void> messageCallback) {
-		List<Callback<JSONObject, Void>> l = messageHandlers.get(op);
+	public void removeListener(String op, MessageListener listener) {
+		List<MessageListener> l = messageListeners.get(op);
 		if(l == null)
 			return;
-		if(l.contains(messageCallback))
-			l.remove(messageCallback);
+		if(l.contains(listener))
+			l.remove(listener);
 	}
 
 	/**
-	 * Deregister all handlers for a certain op (or UID).
+	 * Deregister all listeners for a certain op (or UID).
 	 *  
 	 * @param op The op (or UID).
 	 */
-	public void removeAllHandlers(String op) {
-		messageHandlers.remove(op);
+	public void removeAllListeners(String op) {
+		messageListeners.remove(op);
 	}
 	
 	/**
@@ -158,63 +206,30 @@ public class ROS {
 	 * @param message Message received.
 	 */
 	protected void onMessage(JSONObject message) {
-		JSONObject o = message.isObject();
-		if(o != null) {
-			String op = o.get("op").isString().stringValue();
-			if(op.equals("png")) {
-				JSONString base64data = o.get("data").isString();
-				if(base64data != null) {
-					final com.google.gwt.user.client.ui.Image image = new com.google.gwt.user.client.ui.Image();
-					image.addLoadHandler(new LoadHandler() {
-						public void onLoad(LoadEvent event) {
-							Canvas canvas = Canvas.createIfSupported();
-							Context2d context = canvas.getContext2d();
-							context.drawImage(ImageElement.as(image.getElement()), 0, 0);
-							ImageData imageData = context.getImageData(0, 0, image.getWidth(), image.getHeight());
-							CanvasPixelArray rawData = imageData.getData();
-							StringBuffer jsonData = new StringBuffer();
-							for(int i = 0; i < rawData.getLength(); i += 1) {
-								if(rawData.get(i) > 0) {
-									jsonData.append(String.valueOf(rawData.get(i)));
-								}
-							}
-							onMessage(jsonData.toString());
-						}
-					});
-					image.setUrl("data:image/png;base64," + base64data.stringValue());
-				}
-			} else if(op.equals("publish")) {
-				JSONString topic = o.get("topic").isString();
-				JSONObject msg = o.get("msg").isObject();
-				if(topic != null)
-					callHandlers(topic.stringValue(), msg);
-			} else if(op.equals("service_response")) {
-				JSONString id = o.get("id").isString();
-				JSONObject values = o.get("values").isObject();
-				if(id != null)
-					callHandlers(id.stringValue(), values);
-			}
-
-			callHandlers(op, message);
+		if(message == null) {
+			System.out.println("onMessage(null) called.");
+			return;
 		}
+		
+		JSONString op = message.get("op").isString();
+		if(op != null)
+			callListeners(op.stringValue(), message);
+		else
+			System.out.println("onMessage(): malformed protocol message: " + message.toString());
 	}
-
+	
 	/**
 	 * Call handlers for a certain op (or UID).
 	 * 
 	 * @param key The op (or UID).
 	 * @param arg Object argument.
 	 */
-	protected void callHandlers(String key, JSONObject arg) {
-		List<Callback<JSONObject, Void>> handlers = messageHandlers.get(key);
-		if(handlers != null) {
-			for(Callback<JSONObject, Void> handler : handlers) {
-				handler.onSuccess(arg);
+	protected void callListeners(String key, JSONObject arg) {
+		List<MessageListener> listeners = messageListeners.get(key);
+		if(listeners != null) {
+			for(MessageListener listener : listeners) {
+				listener.onMessage(arg);
 			}
-		} else {
-		}
-		if(!key.equals("*")) {
-			callHandlers("*", arg);
 		}
 	}
 
@@ -225,8 +240,8 @@ public class ROS {
 	 */
 	public void getTopics(final Callback<List<Topic>, Void> callback) {
 		Service topicsClient = new Service("/rosapi/topics", "rosapi/Topics");
-		topicsClient.callService(new JSONObject(), new Callback<JSONObject, Void>() {
-			public void onSuccess(JSONObject result) {
+		topicsClient.callService(new JSONObject(), new MessageListener() {
+			public void onMessage(JSONObject result) {
 				List<Topic> topics = new ArrayList<Topic>();
 				JSONArray a = result.get("topics").isArray();
 				if(a != null) {
@@ -238,10 +253,6 @@ public class ROS {
 				}
 				callback.onSuccess(topics);
 			}
-			
-			public void onFailure(Void reason) {
-				callback.onFailure(reason);
-			}
 		});
 	}
 	
@@ -252,8 +263,8 @@ public class ROS {
 	 */
 	public void getServices(final Callback<List<Service>, Void> callback) {
 		Service servicesClient = new Service("/rosapi/services", "rosapi/Services");
-		servicesClient.callService(new JSONObject(), new Callback<JSONObject, Void>() {
-			public void onSuccess(JSONObject result) {
+		servicesClient.callService(new JSONObject(), new MessageListener() {
+			public void onMessage(JSONObject result) {
 				List<Service> services = new ArrayList<Service>();
 				JSONArray a = result.get("services").isArray();
 				if(a != null) {
@@ -265,10 +276,6 @@ public class ROS {
 				}
 				callback.onSuccess(services);
 			}
-			
-			public void onFailure(Void reason) {
-				callback.onFailure(reason);
-			}
 		});
 	}
 	
@@ -279,8 +286,8 @@ public class ROS {
 	 */
 	public void getParams(final Callback<List<Param>, Void> callback) {
 		Service servicesClient = new Service("/rosapi/get_param_names", "rosapi/GetParamNames");
-		servicesClient.callService(new JSONObject(), new Callback<JSONObject, Void>() {
-			public void onSuccess(JSONObject result) {
+		servicesClient.callService(new JSONObject(), new MessageListener() {
+			public void onMessage(JSONObject result) {
 				List<Param> params = new ArrayList<Param>();
 				JSONArray a = result.get("names").isArray();
 				if(a != null) {
@@ -291,10 +298,6 @@ public class ROS {
 					}
 				}
 				callback.onSuccess(params);
-			}
-			
-			public void onFailure(Void reason) {
-				callback.onFailure(reason);
 			}
 		});
 	}
@@ -325,6 +328,10 @@ public class ROS {
 	 */
 	public static interface MessageListener {
 		public void onMessage(JSONObject message);
+	}
+	
+	public static interface ValueListener<T> {
+		public void onValue(T value);
 	}
 
 	/**
@@ -420,11 +427,15 @@ public class ROS {
 		/**
 		 * Register a handler for subscribing to this topic.
 		 * 
-		 * @param callback Async callback.
+		 * @param listener Async callback.
 		 */
-		public void subscribe(Callback<JSONObject, Void> callback) {
-			String subscribeId = "subscribe:" + name + ':' + ++idCounter;
-			addMessageHandler(getName(), callback);
+		public void subscribe(final MessageListener listener) {
+			final String subscribeId = uidGenerator.generate("subscribe", name);
+			addMessageListener(getName(), new MessageListener() {
+				public void onMessage(JSONObject message) {
+					listener.onMessage(message);
+				}
+			});
 			// TODO: queue message if not connected
 			JSONObject o = new JSONObject();
 			o.put("op", new JSONString("subscribe"));
@@ -440,8 +451,8 @@ public class ROS {
 		 * 
 		 */
 		public void unsubscribe() {
-			removeAllHandlers(getName());
-			String unsubscribeId = "unsubscribe:" + name + ":" + ++idCounter;
+			removeAllListeners(getName());
+			final String unsubscribeId = uidGenerator.generate("unsubscribe", name);
 			// TODO: queue message if not connected
 			JSONObject o = new JSONObject();
 			o.put("op", new JSONString("unsubscribe"));
@@ -455,7 +466,7 @@ public class ROS {
 		 * 
 		 */
 		public void advertise() {
-			String advertiseId = "advertise:" + name + ":" + ++idCounter;
+			final String advertiseId = uidGenerator.generate("advertise", name);
 			JSONObject o = new JSONObject();
 			o.put("op", new JSONString("advertise"));
 			o.put("id", new JSONString(advertiseId));
@@ -470,7 +481,7 @@ public class ROS {
 		 * 
 		 */
 		public void unadvertise() {
-			String unadvertiseId = "unadvertise:" + name + ":" + ++idCounter;
+			final String unadvertiseId = uidGenerator.generate("unadvertise", name);
 			JSONObject o = new JSONObject();
 			o.put("op", new JSONString("unadvertise"));
 			o.put("id", new JSONString(unadvertiseId));
@@ -491,7 +502,7 @@ public class ROS {
 			if(!isAdvertised()) {
 				advertise();
 			}
-			String publishId = "publish:" + name + ":" + ++idCounter;
+			final String publishId = uidGenerator.generate("publish", name);
 			JSONObject o = new JSONObject();
 			o.put("op", new JSONString("publish"));
 			o.put("id", new JSONString(publishId));
@@ -533,11 +544,17 @@ public class ROS {
 		 * Make a call to this service.
 		 * 
 		 * @param args Arguments to the service.
-		 * @param callback Async result callback.
+		 * @param listener Async result callback.
 		 */
-		public void callService(JSONObject args, final Callback<JSONObject, Void> callback) {
-			String serviceCallId = "call_service:" + name + ":" + ++idCounter;
-			addMessageHandler(serviceCallId, callback);
+		public void callService(JSONObject args, final MessageListener listener) {
+			final String serviceCallId = uidGenerator.generate("call_service", name);
+			if(listener != null)
+				addMessageListener(serviceCallId, new MessageListener() {
+					public void onMessage(JSONObject message) {
+						listener.onMessage(message);
+						removeListener(serviceCallId, this);
+					}
+				});
 			JSONObject o = new JSONObject();
 			o.put("op", new JSONString("call_service"));
 			o.put("id", new JSONString(serviceCallId));
@@ -578,17 +595,13 @@ public class ROS {
 		 * 
 		 * @param callback Async result callback.
 		 */
-		public void get(final Callback<JSONObject, Void> callback) {
+		public void get(final ValueListener<String> callback) {
 			Service paramClient = new Service("/rosapi/get_param", "rosapi/GetParam");
 			JSONObject serviceArgs = new JSONObject();
 			serviceArgs.put("name", new JSONString(name));
-			paramClient.callService(serviceArgs, new Callback<JSONObject, Void>() {
-				public void onSuccess(JSONObject result) {
-					callback.onSuccess(result);
-				}
-				
-				public void onFailure(Void reason) {
-					callback.onFailure(reason);
+			paramClient.callService(serviceArgs, new MessageListener() {
+				public void onMessage(JSONObject message) {
+					callback.onValue(message.get("value").isString().stringValue());
 				}
 			});
 		}
@@ -597,22 +610,13 @@ public class ROS {
 		 * Set the value of this param.
 		 * 
 		 * @param value Param value to set.
-		 * @param callback Async result callback.
 		 */
-		public void set(JSONValue value, final Callback<JSONObject, Void> callback) {
+		public void set(JSONValue value) {
 			Service paramClient = new Service("/rosapi/set_param", "rosapi/SetParam");
 			JSONObject serviceArgs = new JSONObject();
 			serviceArgs.put("name", new JSONString(name));
 			serviceArgs.put("value", value);
-			paramClient.callService(serviceArgs, new Callback<JSONObject, Void>() {
-				public void onSuccess(JSONObject result) {
-					callback.onSuccess(result);
-				}
-				
-				public void onFailure(Void reason) {
-					callback.onFailure(reason);
-				}
-			});
+			paramClient.callService(serviceArgs, null);
 		}
 	}
 }
