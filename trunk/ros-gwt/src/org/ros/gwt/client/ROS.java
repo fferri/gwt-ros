@@ -149,6 +149,8 @@ public class ROS {
 		JSONObject obj;
 		if((obj = value.isObject()) != null)
 			ROS.this.onMessage(obj);
+		else
+			System.out.println("Unhandled JSON message: " + value.toString());
 	}
 	
 	/**
@@ -253,7 +255,7 @@ public class ROS {
 		servicesClient.callService(new JSONObject(), new Callback<JSONObject, Void>() {
 			public void onSuccess(JSONObject result) {
 				List<Service> services = new ArrayList<Service>();
-				JSONArray a = result.get("topics").isArray();
+				JSONArray a = result.get("services").isArray();
 				if(a != null) {
 					for(int i = 0; i < a.size(); i++) {
 						JSONString s = a.get(i).isString();
@@ -280,7 +282,7 @@ public class ROS {
 		servicesClient.callService(new JSONObject(), new Callback<JSONObject, Void>() {
 			public void onSuccess(JSONObject result) {
 				List<Param> params = new ArrayList<Param>();
-				JSONArray a = result.get("topics").isArray();
+				JSONArray a = result.get("names").isArray();
 				if(a != null) {
 					for(int i = 0; i < a.size(); i++) {
 						JSONString s = a.get(i).isString();
@@ -495,7 +497,6 @@ public class ROS {
 			o.put("id", new JSONString(publishId));
 			o.put("topic", new JSONString(name));
 			o.put("msg", message);
-			System.out.println("ROS.publish(" + o.toString() + ")");
 			send(o);
 		}
 	}
@@ -581,7 +582,6 @@ public class ROS {
 			Service paramClient = new Service("/rosapi/get_param", "rosapi/GetParam");
 			JSONObject serviceArgs = new JSONObject();
 			serviceArgs.put("name", new JSONString(name));
-			serviceArgs.put("value", new JSONString(""));
 			paramClient.callService(serviceArgs, new Callback<JSONObject, Void>() {
 				public void onSuccess(JSONObject result) {
 					callback.onSuccess(result);
