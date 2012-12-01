@@ -161,12 +161,9 @@ public class Client implements EntryPoint {
 		btnSubscribe.addClickHandler(new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				ROS.Topic topic = ros.newTopic(txtTopicNamePub.getText(), txtTopicTypePub.getText());
-				topic.subscribe(new Callback<JSONObject, Void>() {
-					public void onSuccess(JSONObject result) {
+				topic.subscribe(new ROS.MessageListener() {
+					public void onMessage(JSONObject result) {
 						log(result.toString());
-					}
-					
-					public void onFailure(Void reason) {
 					}
 				});
 				btnSubscribe.setEnabled(false);
@@ -194,14 +191,9 @@ public class Client implements EntryPoint {
 			public void onClick(ClickEvent event) {
 				btnCallService.setEnabled(false);
 				ROS.Service s = ros.newService(txtServiceName.getText(), txtServiceType.getText());
-				s.callService(JSONParser.parseStrict(txtServiceArgs.getText()).isObject(), new Callback<JSONObject, Void>() {
-					public void onSuccess(JSONObject result) {
+				s.callService(JSONParser.parseStrict(txtServiceArgs.getText()).isObject(), new ROS.MessageListener() {
+					public void onMessage(JSONObject result) {
 						txtServiceResult.setText(result.toString());
-						btnCallService.setEnabled(true);
-					}
-
-					public void onFailure(Void reason) {
-						Window.alert("callService failed");
 						btnCallService.setEnabled(true);
 					}
 				});
@@ -217,24 +209,15 @@ public class Client implements EntryPoint {
 		btnParamSet.addClickHandler(new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				ROS.Param param = ros.newParam(txtParamName.getText());
-				param.set(new JSONString(txtParamValue.getText()), new Callback<JSONObject, Void>() {
-					public void onSuccess(JSONObject result) {
-					}
-					
-					public void onFailure(Void reason) {
-					}
-				});
+				param.set(new JSONString(txtParamValue.getText()));
 			}
 		});
 		btnParamGet.addClickHandler(new ClickHandler() {
 			public void onClick(ClickEvent event) {
 				ROS.Param param = ros.newParam(txtParamName.getText());
-				param.get(new Callback<JSONObject, Void>() {
-					public void onSuccess(JSONObject result) {
-						Window.alert(txtParamName.getText() + " := " + result.toString());
-					}
-					
-					public void onFailure(Void reason) {
+				param.get(new ROS.ValueListener<String>() {
+					public void onValue(String value) {
+						Window.alert(txtParamName.getText() + " := " + value);
 					}
 				});
 			}
