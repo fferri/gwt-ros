@@ -387,23 +387,15 @@ public class ROS {
 			this.messageType = messageType;
 		}
 
-		public void setName(String name) {
-			this.name = name;
-		}
-
 		public String getName() {
 			return name;
-		}
-
-		public void setMessageType(String messageType) {
-			this.messageType = messageType;
 		}
 
 		public String getMessageType() {
 			return messageType;
 		}
 
-		public void setAdvertised(boolean advertised) {
+		protected void setAdvertised(boolean advertised) {
 			this.advertised = advertised;
 		}
 
@@ -533,6 +525,10 @@ public class ROS {
 		
 		public String getName() {
 			return name;
+		}
+		
+		public String getServiceType() {
+			return serviceType;
 		}
 		
 		@Override

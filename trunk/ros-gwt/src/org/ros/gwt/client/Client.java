@@ -5,8 +5,6 @@ import java.util.List;
 import org.ros.gwt.client.ROS.ConnectionStateListener;
 import org.ros.gwt.client.msg.Twist;
 import org.ros.gwt.client.msg.Vector3;
-import org.ros.gwt.client.msg.tfMessage;
-import org.ros.gwt.client.msg.geometry_msgs.TransformStamped;
 
 import com.google.gwt.core.client.Callback;
 import com.google.gwt.core.client.EntryPoint;
@@ -14,7 +12,6 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONParser;
-import com.google.gwt.json.client.JSONString;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Label;
