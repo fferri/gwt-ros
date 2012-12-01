@@ -42,12 +42,8 @@ if(!JavaScriptWebSocket.IsSupported()) {
 You can ask the list of topics using the {{{getTopics}}} method:
 
 <code language="java">
-ros.getTopics(new Callback<List<ROS.Topic>, Void>() {
-	public void onFailure(Void reason) {
-		Window.alert("getTopics failed");
-	}
-
-	public void onSuccess(List<ROS.Topic> result) {
+ros.getTopics(new MessageListener() {
+	public void onMessage(List<ROS.Topic> result) {
 		Window.alert(result.toString());
 	}
 });
@@ -73,13 +69,9 @@ topic.publish(msg);
 subscribing:
 
 <code language="java">
-topic.subscribe(new Callback<JSONObject, Void>() {
-	public void onSuccess(JSONObject result) {
+topic.subscribe(new MessageListener() {
+	public void onMessage(JSONObject result) {
 		log(result.toString());
-	}
-					
-	public void onFailure(Void reason) {
-		Window.alert("subscribe failed");
 	}
 });
 </code>
@@ -99,13 +91,9 @@ ROS.Service s = ros.newService("/myService", "mypkg/MyServiceType");
 </code>
 
 <code language="java">
-s.callService(args, new Callback<JSONObject, Void>() {
-	public void onSuccess(JSONObject result) {
+s.callService(args, new MessageListener() {
+	public void onMessage(JSONObject result) {
 		// use the result
-	}
-
-	public void onFailure(Void reason) {
-		Window.alert("callService failed");
 	}
 });
 </code>
@@ -121,13 +109,9 @@ ROS.Param param = ros.newParam("/myparam");
 Get it:
 
 <code language="java">
-param.get(new Callback<JSONObject, Void>() {
-	public void onSuccess(JSONObject result) {
-		Window.alert("param value is " + result.toString());
-	}
-
-	public void onFailure(Void reason) {
-		Window.alert("failed to get param");
+param.get(new ValueListener<String>() {
+	public void onValue(String value) {
+		Window.alert("param value is " + value);
 	}
 });
 </code>
@@ -135,13 +119,7 @@ param.get(new Callback<JSONObject, Void>() {
 or set it:
 
 <code language="java">
-param.set(paramValue, new Callback<JSONObject, Void>() {
-	public void onSuccess(JSONObject result) {
-	}
-
-	public void onFailure(Void reason) {
-	}
-});
+param.set(paramValue);
 </code>
 
 = Javadoc =
