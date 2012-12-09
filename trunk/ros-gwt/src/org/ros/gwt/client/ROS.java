@@ -54,6 +54,8 @@ public class ROS {
 	 */
 	private Map<String, List<MessageListener>> messageListeners = new HashMap<String, List<MessageListener>>();
 
+	private static final boolean PRINT_SOCKET_DATA = true;
+	
 	/**
 	 * Construct a {@link ROS} object for communicating with the rosbridge.
 	 * 
@@ -133,10 +135,12 @@ public class ROS {
 	/**
 	 * Send a raw ({@link String}) message over the {@link WebSocket}.
 	 * 
-	 * @param message Raw message string to send.
+	 * @param rawMessage Raw message string to send.
 	 */
-	protected void send(String message) {
-		socket.send(message);
+	protected void send(String rawMessage) {
+		if(PRINT_SOCKET_DATA)
+			System.out.println("ROS >> " + rawMessage);
+		socket.send(rawMessage);
 	}
 	
 	/**
@@ -193,6 +197,8 @@ public class ROS {
 	 * @param rawMessage Raw message string received.
 	 */
 	protected void onMessage(String rawMessage) {
+		if(PRINT_SOCKET_DATA)
+			System.out.println("ROS << " + rawMessage);
 		JSONValue value = JSONParser.parseStrict(rawMessage);
 		JSONObject obj;
 		if((obj = value.isObject()) != null)
