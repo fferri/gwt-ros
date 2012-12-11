@@ -10,7 +10,7 @@
 
 {{{
 java -cp path/to/MsgGen \
-    -Dorg.ros.gwt.msggen,MsgGen.targetPkg="your.gwt.client.package" \
+    -Dorg.ros.gwt.msggen.MsgGen.targetPkg="your.gwt.client.package" \
     -Dorg.ros.gwt.msggen.MsgGen.msgSearchPath="/opt/ros/fuerte" \
     org.ros.gwt.msggen.MsgGen msgName
 }}}
@@ -23,7 +23,7 @@ If the msgName argument is not a fully qualified message, and multiple matches a
 
 == Properties ==
 
-*org.ros.gwt.msggen,MsgGen.targetPkg*: generated files will be put in this package
+*org.ros.gwt.msggen.MsgGen.targetPkg*: generated files will be put in this package
 
 *org.ros.gwt.msggen.MsgGen.msgSearchPath*: path to search for .msg files
 
